@@ -5,6 +5,7 @@ from typing import Union, List
 from config.config import ATHENA_BASE_URL, ATHENA_API_KEY
 from utils.errors import ToolExecutionError
 
+
 async def ingestFile(
     file: Union[str, bytes],
     source_type: str,
@@ -39,8 +40,10 @@ async def ingestFile(
 
         # Handle file input
         if isinstance(file, str):
-            if not file.strip() or not os.path.isfile(file):
-                raise ToolExecutionError("file path must be a non-empty string and point to an existing local file")
+            if not file.strip():
+                raise ToolExecutionError("file path must be a non-empty string")
+            if not os.path.isfile(file):
+                raise ToolExecutionError(f"File not found: {file}")
             with open(file, "rb") as f:
                 file_bytes = f.read()
             filename = os.path.basename(file)
@@ -48,15 +51,17 @@ async def ingestFile(
                 "file",
                 io.BytesIO(file_bytes),
                 filename=filename,
-                content_type="application/pdf"
+                content_type="application/octet-stream",
             )
         elif isinstance(file, bytes):
-            filename = (title.replace(" ", "_") if title else "upload") + ".pdf"
+            ext = f".{source_type.lower()}" if source_type else ".bin"
+            safe_title = title.replace(" ", "_") if title else "upload"
+            filename = f"{safe_title}{ext}"
             data.add_field(
                 "file",
                 io.BytesIO(file),
                 filename=filename,
-                content_type="application/pdf"
+                content_type="application/octet-stream",
             )
         else:
             raise ToolExecutionError(f"file must be a file path (str) or bytes, got {type(file)}")
@@ -76,7 +81,7 @@ async def ingestFile(
                 f"{ATHENA_BASE_URL.rstrip('/')}/ingest",
                 data=data,
                 headers=headers,
-                timeout=aiohttp.ClientTimeout(total=60)
+                timeout=aiohttp.ClientTimeout(total=60),
             ) as resp:
                 if resp.status != 200:
                     body = await resp.text()
@@ -96,7 +101,6 @@ async def ingestFile(
         raise ToolExecutionError(f"Athena ingest failed: {e.status} {body}") from e
     except Exception as e:
         raise ToolExecutionError(f"Athena ingest failed: {str(e)}") from e
-
 
 
 

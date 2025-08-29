@@ -8,13 +8,13 @@ def register_athena(mcp: FastMCP):
         description="Ingest a file into Athena with metadata"
     )
     async def athenaIngestTool(
-        file: bytes,
-        sourceType: str,
-        title: str,
-        description: str,
-        tags: list[str]
+        file: str | bytes,
+        source_type: str,
+        title: str = "",
+        description: str = "",
+        tags: str | list[str] = None
     ) -> dict:
-        return await ingestFile(file, sourceType, title, description, tags)
+        return await ingestFile(file, source_type, title, description, tags)
 
     @mcp.tool(
         name="athenaQuery",
